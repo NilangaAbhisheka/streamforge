@@ -5,9 +5,9 @@ from psycopg.errors import UniqueViolation
 
 
 customers = [
-    {"customer_name": "New Customer", "email": "new@example.com"},
+    {"customer_name": "New Customer", "email": "new2@example.com"},
     {"customer_name": "Duplicate Customer", "email": "valid1@example.com"},
-    {"customer_name": "Another Customer", "email": "another@example.com"},
+    {"customer_name": "Another Customer", "email": "another2@example.com"},
 ]
 
 
@@ -26,22 +26,33 @@ def batch_already_completed(connection, batch_id):
         return cursor.fetchone() is not None
 
 
-def start_batch(connection, batch_id):
+def start_batch(connection, batch_id, records_received):
     with connection.cursor() as cursor:
         cursor.execute(
             """
             INSERT INTO pipeline_batches (
                 batch_id,
                 pipeline_name,
-                status
+                status,
+                records_received
             )
-            VALUES (%s, %s, %s)
+            VALUES (%s, %s, %s, %s)
             """,
-            (batch_id, "customer_batch", "STARTED"),
+            (
+                batch_id,
+                "customer_batch",
+                "STARTED",
+                records_received,
+            ),
         )
 
 
-def complete_batch(connection, batch_id, records_processed):
+def complete_batch(
+    connection,
+    batch_id,
+    records_processed,
+    records_quarantined,
+):
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -49,10 +60,15 @@ def complete_batch(connection, batch_id, records_processed):
             SET
                 completed_at = CURRENT_TIMESTAMP,
                 status = 'COMPLETED',
-                records_processed = %s
+                records_processed = %s,
+                records_quarantined = %s
             WHERE batch_id = %s
             """,
-            (records_processed, batch_id),
+            (
+                records_processed,
+                records_quarantined,
+                batch_id,
+            ),
         )
 
 
@@ -104,27 +120,40 @@ def quarantine_record(
         )
 
 
-def process_customer_with_isolation(connection, customer, batch_id):
+def process_customer_with_isolation(
+    connection,
+    customer,
+    batch_id,
+):
     savepoint_name = "customer_insert"
 
     with connection.cursor() as cursor:
-        cursor.execute(f"SAVEPOINT {savepoint_name}")
+        cursor.execute(
+            f"SAVEPOINT {savepoint_name}"
+        )
 
     try:
-        load_valid_customer(connection, customer)
+        load_valid_customer(
+            connection,
+            customer,
+        )
 
         with connection.cursor() as cursor:
-            cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
+            cursor.execute(
+                f"RELEASE SAVEPOINT {savepoint_name}"
+            )
 
         return True
 
-    except UniqueViolation as error:
+    except UniqueViolation:
         with connection.cursor() as cursor:
             cursor.execute(
                 f"ROLLBACK TO SAVEPOINT {savepoint_name}"
             )
 
-        failure_reason = f"email already exists: {customer['email']}"
+        failure_reason = (
+            f"email already exists: {customer['email']}"
+        )
 
         quarantine_record(
             connection,
@@ -135,7 +164,9 @@ def process_customer_with_isolation(connection, customer, batch_id):
         )
 
         with connection.cursor() as cursor:
-            cursor.execute(f"RELEASE SAVEPOINT {savepoint_name}")
+            cursor.execute(
+                f"RELEASE SAVEPOINT {savepoint_name}"
+            )
 
         return False
 
@@ -145,8 +176,12 @@ def load_customers(customers, batch_id):
 
     try:
         if batch_already_completed(connection, batch_id):
-            print(f"Batch {batch_id} already completed. Skipping.")
+            print(
+                f"Batch {batch_id} already completed. Skipping."
+            )
             return
+
+        records_received = len(customers)
 
         valid_customers = []
         invalid_customers = []
@@ -164,11 +199,16 @@ def load_customers(customers, batch_id):
                     }
                 )
 
+        print(f"Records received: {records_received}")
         print(f"Valid records: {len(valid_customers)}")
         print(f"Invalid records: {len(invalid_customers)}")
 
         with connection:
-            start_batch(connection, batch_id)
+            start_batch(
+                connection,
+                batch_id,
+                records_received,
+            )
 
             for item in invalid_customers:
                 quarantine_record(
@@ -180,6 +220,7 @@ def load_customers(customers, batch_id):
                 )
 
             records_processed = 0
+            database_quarantined = 0
 
             for customer in valid_customers:
                 inserted = process_customer_with_isolation(
@@ -190,16 +231,35 @@ def load_customers(customers, batch_id):
 
                 if inserted:
                     records_processed += 1
+                else:
+                    database_quarantined += 1
+
+            records_quarantined = (
+                len(invalid_customers)
+                + database_quarantined
+            )
 
             complete_batch(
                 connection,
                 batch_id,
                 records_processed,
+                records_quarantined,
             )
 
-        print(f"Batch {batch_id} completed successfully.")
-        print(f"Records successfully processed: {records_processed}")
-        print(f"Records quarantined: {len(invalid_customers) + (len(valid_customers) - records_processed)}")
+        print(
+            f"Batch {batch_id} completed successfully."
+        )
+        print(
+            f"Records received: {records_received}"
+        )
+        print(
+            f"Records successfully processed: "
+            f"{records_processed}"
+        )
+        print(
+            f"Records quarantined: "
+            f"{records_quarantined}"
+        )
 
     except Exception as error:
         print(f"Batch {batch_id} failed.")
@@ -211,4 +271,7 @@ def load_customers(customers, batch_id):
 
 
 if __name__ == "__main__":
-    load_customers(customers, "BATCH-006")
+    load_customers(
+        customers,
+        "BATCH-007",
+    )
