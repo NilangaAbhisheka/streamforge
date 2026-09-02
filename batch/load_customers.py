@@ -1,14 +1,18 @@
+from pathlib import Path
+
 from connection import get_connection
+from readers import read_customers_from_csv
 from validators import validate_customer
 from psycopg.types.json import Jsonb
 from psycopg.errors import UniqueViolation
 
 
-customers = [
-    {"customer_name": "New Customer", "email": "new2@example.com"},
-    {"customer_name": "Duplicate Customer", "email": "valid1@example.com"},
-    {"customer_name": "Another Customer", "email": "another2@example.com"},
-]
+CSV_FILE_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "data"
+    / "raw"
+    / "customers.csv"
+)
 
 
 def batch_already_completed(connection, batch_id):
@@ -271,7 +275,11 @@ def load_customers(customers, batch_id):
 
 
 if __name__ == "__main__":
+    customers = read_customers_from_csv(
+        CSV_FILE_PATH
+    )
+
     load_customers(
         customers,
-        "BATCH-007",
+        "BATCH-009",
     )

@@ -1,0 +1,6 @@
+customer_name,email
+Michael Perera,michael@example.com
+,missingname2@example.com
+Sarah Silva,invalid-email
+Kevin Fernando,kevin@example.com
+Existing Customer,valid1@example.com
