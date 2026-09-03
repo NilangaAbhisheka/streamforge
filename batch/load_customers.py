@@ -1,8 +1,8 @@
 from pathlib import Path
 
 from connection import get_connection
-from readers import read_customers_from_csv
-from validators import validate_customer
+from batch.customer_readers import read_customers_from_csv
+from batch.customer_validators import validate_customer
 from psycopg.types.json import Jsonb
 from psycopg.errors import UniqueViolation
 

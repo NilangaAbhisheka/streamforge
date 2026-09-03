@@ -1,0 +1,77 @@
+[
+  {
+    "order_id": 1001,
+    "customer_id": 1,
+    "store_id": 1,
+    "status": "COMPLETED",
+    "order_total": 900.00,
+    "items": [
+      {
+        "product_id": 1,
+        "quantity": 2,
+        "unit_price": 450.00
+      }
+    ]
+  },
+  {
+    "order_id": 1002,
+    "customer_id": null,
+    "store_id": 1,
+    "status": "COMPLETED",
+    "order_total": 350.00,
+    "items": [
+      {
+        "product_id": 4,
+        "quantity": 1,
+        "unit_price": 350.00
+      }
+    ]
+  },
+  {
+    "order_id": 1003,
+    "customer_id": 1,
+    "store_id": 1,
+    "status": "COMPLETED",
+    "order_total": 2950.00,
+    "items": [
+      {
+        "product_id": 5,
+        "quantity": 1,
+        "unit_price": 2500.00
+      },
+      {
+        "product_id": 6,
+        "quantity": 1,
+        "unit_price": 450.00
+      }
+    ]
+  },
+  {
+    "order_id": 1004,
+    "customer_id": 1,
+    "store_id": 1,
+    "status": "COMPLETED",
+    "order_total": 1000.00,
+    "items": [
+      {
+        "product_id": 1,
+        "quantity": 2,
+        "unit_price": 450.00
+      }
+    ]
+  },
+  {
+    "order_id": 1005,
+    "customer_id": null,
+    "store_id": 1,
+    "status": "COMPLETED",
+    "order_total": 450.00,
+    "items": [
+      {
+        "product_id": 99999,
+        "quantity": 1,
+        "unit_price": 450.00
+      }
+    ]
+  }
+]
